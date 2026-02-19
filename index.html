@@ -8,40 +8,28 @@
     <style>
         :root { --signifi-navy: #0D202D; --accent-cyan: #72E0FB; }
         body { background: var(--signifi-navy); color: white; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        
         #home-screen-ui { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 90vh; width: 100%; padding: 40px 0; }
-        .logo-box { background: white; padding: 15px 30px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .logo-box { background: white; padding: 15px 30px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
         .va-logo { width: 320px; } .signifi-logo { width: 200px; }
-
         #status-card { text-align: center; }
-        #init-btn { background: var(--accent-cyan); color: var(--signifi-navy); padding: 15px 30px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        
-        .btn-answer { background: #28a745; color: white; padding: 20px 60px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.4rem; margin-top: 25px; animation: pulse 1.5s infinite; }
-
+        .btn-answer { background: #28a745; color: white; padding: 20px 60px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.5rem; margin-top: 20px; }
         #video-stage { display: none; position: relative; width: 100vw; height: 100vh; background: #000; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 30px; right: 30px; width: 280px; height: 180px; border: 2px solid var(--accent-cyan); border-radius: 15px; object-fit: cover; z-index: 20; transform: scaleX(-1); }
-        
+        #remote-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
+        #local-video { position: absolute; top: 30px; right: 30px; width: 280px; height: 180px; border: 2px solid var(--accent-cyan); border-radius: 15px; object-fit: cover; z-index: 20; transform: scaleX(-1); background: #222; }
         .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 30; }
-        .btn-ui { padding: 15px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; color: white; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); }
-        .off { background: #ff4444 !important; }
-
-        #admin-lock { position: fixed; top: 0; right: 0; width: 60px; height: 60px; cursor: pointer; z-index: 100; }
+        .btn-ui { padding: 15px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; color: white; background: rgba(255,255,255,0.2); }
         .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
         .admin-content { background: white; padding: 30px; border-radius: 15px; width: 400px; color: #333; }
         input { width: 100%; padding: 10px; margin: 10px 0; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
-    <div id="admin-lock" onclick="openAdmin()"></div>
     <audio id="ring" loop src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
-
     <div id="home-screen-ui">
         <div class="logo-box"><img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/Vision%20Assist%20logo.png" class="va-logo"></div>
         <div id="status-card">
             <h2 id="state">Offline: Set Code in Admin</h2>
-            <button id="init-btn" onclick="activate()" style="display:none;">ACTIVATE STATION</button>
+            <button id="init-btn" onclick="activate()" style="display:none; padding:15px 30px; cursor:pointer;">ACTIVATE STATION</button>
             <div id="incoming-call-ui" style="display:none;">
                 <h2 style="color: #28a745;">INCOMING CALL...</h2>
                 <button class="btn-answer" onclick="acceptCall()">ANSWER</button>
@@ -54,18 +42,18 @@
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay muted playsinline></video>
         <div class="controls">
-            <button class="btn-ui" id="e-mute" onclick="toggleMute()">Mute</button>
-            <button class="btn-ui" id="e-video" onclick="toggleVideo()">Video Off</button>
+            <button class="btn-ui" onclick="toggleMute()">Mute</button>
+            <button class="btn-ui" onclick="toggleVideo()">Video Off</button>
             <button class="btn-ui" style="background:#ff4444;" onclick="hangUp()">Hang Up</button>
         </div>
     </div>
 
+    <div id="admin-lock" onclick="openAdmin()" style="position:fixed; top:0; right:0; width:60px; height:60px; cursor:pointer;"></div>
     <div id="admin-panel" class="admin-modal">
         <div class="admin-content">
             <h3>Expert Admin</h3>
-            <label><b>Set Station Code:</b></label>
-            <input type="text" id="my-code-input" placeholder="e.g. 12345">
-            <button onclick="saveAdmin()" style="width:100%; background:green; color:white; padding:10px;">SAVE & START</button>
+            <input type="text" id="my-code-input" placeholder="Enter Station Code">
+            <button onclick="saveAdmin()" style="width:100%; background:green; color:white; padding:10px;">Save & Restart</button>
         </div>
     </div>
 
@@ -74,38 +62,53 @@
         const ring = document.getElementById('ring');
 
         const savedCode = localStorage.getItem('tech-code');
-        if(savedCode) { startStation(savedCode); }
+        if(savedCode) startStation(savedCode);
 
-        function activate() { document.getElementById('init-btn').style.display='none'; document.getElementById('state').innerText="Station Online: " + localStorage.getItem('tech-code'); }
+        function activate() { 
+            document.getElementById('init-btn').style.display='none'; 
+            document.getElementById('state').innerText="Station Online: " + localStorage.getItem('tech-code');
+        }
+
         function openAdmin() { if(prompt("Pass:")==="123") document.getElementById('admin-panel').style.display='flex'; }
         function saveAdmin() { localStorage.setItem('tech-code', document.getElementById('my-code-input').value); location.reload(); }
 
         function startStation(code) {
             peer = new Peer('Expert-' + code);
-            document.getElementById('state').innerText = "Expert Station LOCKED";
+            document.getElementById('state').innerText = "Expert Station Locked";
             document.getElementById('init-btn').style.display = 'inline-block';
+            
             peer.on('call', call => {
                 activeCall = call;
                 ring.play().catch(()=>{});
-                document.getElementById('incoming-call-ui').style.display='block';
-                activeCall.on('close', () => cleanupAndReload());
+                document.getElementById('incoming-call-ui').style.display = 'block';
+                
+                // Fix: Properly handle the incoming stream event
+                activeCall.on('stream', remoteStream => {
+                    const rv = document.getElementById('remote-video');
+                    if (rv.srcObject !== remoteStream) {
+                        rv.srcObject = remoteStream;
+                        rv.play();
+                    }
+                });
+
+                activeCall.on('close', () => location.reload());
             });
         }
 
         async function acceptCall() {
             ring.pause();
-            localStream = await navigator.mediaDevices.getUserMedia({video: {width:{ideal:1280}}, audio: true}).catch(()=>navigator.mediaDevices.getUserMedia({video:true, audio:true}));
-            document.getElementById('local-video').srcObject = localStream;
-            activeCall.answer(localStream);
-            document.getElementById('home-screen-ui').style.display='none';
-            document.getElementById('video-stage').style.display='block';
-            activeCall.on('stream', rs => { document.getElementById('remote-video').srcObject = rs; });
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+                document.getElementById('local-video').srcObject = localStream;
+                activeCall.answer(localStream);
+                document.getElementById('home-screen-ui').style.display = 'none';
+                document.getElementById('video-stage').style.display = 'block';
+            } catch (e) { alert("Camera Error"); }
         }
 
-        function toggleMute() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('e-mute').classList.toggle('off'); }
-        function toggleVideo() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('e-video').classList.toggle('off'); }
-        function hangUp() { if(activeCall) activeCall.close(); cleanupAndReload(); }
-        function cleanupAndReload() { if (localStream) localStream.getTracks().forEach(t => t.stop()); location.reload(); }
+        function toggleMute() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; }
+        function toggleVideo() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; }
+        function hangUp() { if(activeCall) activeCall.close(); location.reload(); }
     </script>
 </body>
 </html>
