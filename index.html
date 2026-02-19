@@ -8,156 +8,97 @@
     <style>
         :root { --signifi-navy: #0D202D; --accent-cyan: #72E0FB; }
         body { background: var(--signifi-navy); color: white; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        
         #home-screen-ui { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 90vh; width: 100%; padding: 40px 0; }
-        .logo-box { background: white; padding: 15px 30px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .va-logo { width: 320px; height: auto; object-fit: contain; }
-        .signifi-logo { width: 200px; height: auto; object-fit: contain; }
-
-        #status-card { text-align: center; z-index: 10; }
-        #state { font-size: 1.8rem; letter-spacing: 1px; color: var(--accent-cyan); margin-bottom: 10px; }
-        
-        /* Activation Button */
-        #init-btn { background: var(--accent-cyan); color: var(--signifi-navy); padding: 15px 30px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        
-        /* Incoming Call UI */
-        #incoming-call-ui { display: none; }
-        .btn-answer { background: #28a745; color: white; padding: 20px 60px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.4rem; margin-top: 25px; box-shadow: 0 0 20px rgba(40, 167, 69, 0.4); animation: pulse 1.5s infinite; }
-
+        .logo-box { background: white; padding: 15px 30px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .va-logo { width: 320px; } .signifi-logo { width: 200px; }
+        #status-card { text-align: center; }
+        .btn-answer { background: #28a745; color: white; padding: 20px 60px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.4rem; margin-top: 25px; }
         #video-stage { display: none; position: relative; width: 100vw; height: 100vh; background: #000; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video { position: absolute; top: 30px; right: 30px; width: 280px; height: 180px; border: 2px solid var(--accent-cyan); border-radius: 15px; object-fit: cover; z-index: 20; transform: scaleX(-1); }
-        
-        #admin-lock { position: fixed; top: 0; right: 0; width: 60px; height: 60px; cursor: pointer; z-index: 100; }
+        .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 30; }
+        .btn { padding: 15px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; color: white; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); }
+        .btn-end { background: #ff4444; }
+        .off { background: #ff4444 !important; }
         .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
         .admin-content { background: white; padding: 30px; border-radius: 15px; width: 450px; color: #333; }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-        }
     </style>
 </head>
 <body>
-    <div id="admin-lock" onclick="openAdmin()"></div>
-
-    <audio id="ringtone-player" loop>
-        <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
 
     <div id="home-screen-ui">
-        <div class="logo-box">
-            <img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/Vision%20Assist%20logo.png" class="va-logo" alt="Vision Assist">
-        </div>
-        
+        <div class="logo-box"><img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/Vision%20Assist%20logo.png" class="va-logo"></div>
         <div id="status-card">
-            <h2 id="state">System Locked</h2>
-            <button id="init-btn" onclick="activateSystem()">ACTIVATE EXPERT STATION</button>
-            
-            <div id="incoming-call-ui">
-                <h2 style="color: #28a745; animation: pulse 1.5s infinite;">INCOMING CALL...</h2>
-                <button class="btn-answer" onclick="acceptCall()">ANSWER CALL</button>
+            <h2 id="state">System Ready</h2>
+            <button id="init-btn" onclick="activate()" style="padding:15px 30px; cursor:pointer;">ACTIVATE STATION</button>
+            <div id="incoming-call-ui" style="display:none;">
+                <h2 style="color: #28a745;">INCOMING CALL...</h2>
+                <button class="btn-answer" onclick="acceptCall()">ANSWER</button>
             </div>
         </div>
-
-        <div class="logo-box">
-            <img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/signifi-logo.png" class="signifi-logo" alt="Signifi">
-        </div>
+        <div class="logo-box"><img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/signifi-logo.png" class="signifi-logo"></div>
     </div>
 
     <div id="video-stage">
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay muted playsinline></video>
-        <div style="position:absolute; bottom:40px; left:50%; transform:translateX(-50%); z-index:30;">
-            <button onclick="hangUp()" style="background:#ff4444; color:white; padding:15px 45px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">Hang Up</button>
+        <div class="controls">
+            <button class="btn" id="e-mute" onclick="toggleMute()">Mute</button>
+            <button class="btn" id="e-video" onclick="toggleVideo()">Video Off</button>
+            <button class="btn btn-end" onclick="hangUp()">Hang Up</button>
         </div>
     </div>
 
     <div id="admin-panel" class="admin-modal">
         <div class="admin-content">
-            <h3>Expert Device Settings</h3>
-            <label>Camera:</label> <select id="cam-exp"></select>
-            <label>Microphone:</label> <select id="mic-exp"></select>
-            <label>Speaker:</label> <select id="spk-exp"></select>
-            <button onclick="loadDevices()" style="width:100%; padding:10px; background:#444; color:white; border:none; margin-top:10px;">REFRESH LIST</button>
-            <button onclick="saveSettings()" style="width:100%; padding:10px; background:var(--signifi-navy); color:white; border:none; margin-top:5px;">SAVE & APPLY</button>
-            <button onclick="closeAdmin()" style="width:100%; padding:10px; background:#888; color:white; border:none; margin-top:5px;">CANCEL</button>
+            <h3>Expert Settings</h3>
+            <label>Cam:</label> <select id="c-e"></select>
+            <label>Mic:</label> <select id="m-e"></select>
+            <button onclick="saveSettings()" style="width:100%; background:green; color:white; padding:10px;">Save</button>
         </div>
     </div>
 
     <script>
         const peer = new Peer('Expert-Laptop-Station');
-        const ringtone = document.getElementById('ringtone-player');
+        const ring = document.getElementById('ringtone');
         let activeCall, localStream;
 
-        // Step 1: User must click to enable audio engine
-        function activateSystem() {
-            document.getElementById('init-btn').style.display = 'none';
-            document.getElementById('state').innerText = "Expert Station: ONLINE";
-            console.log("Audio and System Activated.");
-        }
-
+        function activate() { document.getElementById('init-btn').style.display='none'; document.getElementById('state').innerText="Station Online"; }
+        
         peer.on('call', call => { 
             activeCall = call; 
-            // Play ringtone (only works if activateSystem was clicked)
-            ringtone.play().catch(e => console.log("Audio play blocked: ", e));
-            
-            document.getElementById('state').style.display = 'none';
-            document.getElementById('incoming-call-ui').style.display = 'block'; 
-            activeCall.on('close', () => location.reload()); 
+            ring.play().catch(()=>{});
+            document.getElementById('incoming-call-ui').style.display='block';
+            activeCall.on('close', () => location.reload());
         });
 
         async function acceptCall() {
-            try {
-                ringtone.pause();
-                ringtone.currentTime = 0;
-                
-                const constraints = {
-                    video: { deviceId: localStorage.getItem('exp-cam') ? { exact: localStorage.getItem('exp-cam') } : undefined },
-                    audio: { deviceId: localStorage.getItem('exp-mic') ? { exact: localStorage.getItem('exp-mic') } : undefined }
-                };
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                
-                const remoteVideo = document.getElementById('remote-video');
-                if (localStorage.getItem('exp-spk') && remoteVideo.setSinkId) {
-                    await remoteVideo.setSinkId(localStorage.getItem('exp-spk'));
-                }
-
-                document.getElementById('local-video').srcObject = localStream;
-                activeCall.answer(localStream);
-                
-                document.getElementById('home-screen-ui').style.display = 'none';
-                document.getElementById('video-stage').style.display = 'block';
-                activeCall.on('stream', rs => document.getElementById('remote-video').srcObject = rs);
-            } catch (err) { alert("Hardware Access Error."); ringtone.pause(); }
+            ring.pause();
+            const constraints = {
+                video: { deviceId: localStorage.getItem('e-c') ? { exact: localStorage.getItem('e-c') } : undefined, width: {ideal: 1280} },
+                audio: { deviceId: localStorage.getItem('e-m') ? { exact: localStorage.getItem('e-m') } : undefined }
+            };
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            document.getElementById('local-video').srcObject = localStream;
+            activeCall.answer(localStream);
+            document.getElementById('home-screen-ui').style.display='none';
+            document.getElementById('video-stage').style.display='block';
+            activeCall.on('stream', remoteStream => {
+                document.getElementById('remote-video').srcObject = remoteStream;
+            });
         }
 
+        function toggleMute() {
+            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            document.getElementById('e-mute').classList.toggle('off');
+        }
+        function toggleVideo() {
+            localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+            document.getElementById('e-video').classList.toggle('off');
+        }
         function hangUp() { if(activeCall) activeCall.close(); location.reload(); }
-        function openAdmin() { if(prompt("Password:") === "123") { document.getElementById('admin-panel').style.display = 'flex'; loadDevices(); } }
-        function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
-        
-        async function loadDevices() {
-            try {
-                await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const cam = document.getElementById('cam-exp'), mic = document.getElementById('mic-exp'), spk = document.getElementById('spk-exp');
-                cam.innerHTML = mic.innerHTML = spk.innerHTML = "";
-                devices.forEach(d => {
-                    const opt = new Option(d.label || "Device", d.deviceId);
-                    if(d.kind === 'videoinput') cam.add(opt);
-                    if(d.kind === 'audioinput') mic.add(opt);
-                    if(d.kind === 'audiooutput') spk.add(opt);
-                });
-            } catch(e) { alert("Permission denied"); }
-        }
-
-        function saveSettings() {
-            localStorage.setItem('exp-cam', document.getElementById('cam-exp').value);
-            localStorage.setItem('exp-mic', document.getElementById('mic-exp').value);
-            localStorage.setItem('exp-spk', document.getElementById('spk-exp').value);
-            location.reload();
-        }
+        function openAdmin() { if(prompt("Pass:")==="123") document.getElementById('admin-panel').style.display='flex'; }
     </script>
 </body>
 </html>
