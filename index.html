@@ -18,8 +18,10 @@
         #local-video { position: absolute; top: 30px; right: 30px; width: 280px; height: 180px; border: 2px solid var(--accent-cyan); border-radius: 15px; object-fit: cover; z-index: 20; transform: scaleX(-1); }
         .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 30; }
         .btn { padding: 15px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; color: white; background: rgba(255,255,255,0.2); }
-        .btn-end { background: #ff4444; } .off { background: #ff4444 !important; }
+        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
+        .admin-content { background: white; padding: 30px; border-radius: 15px; width: 400px; color: #333; }
         #admin-lock { position: fixed; top: 0; right: 0; width: 60px; height: 60px; cursor: pointer; z-index: 100; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -29,8 +31,7 @@
     <div id="home-screen-ui">
         <div class="logo-box"><img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/Vision%20Assist%20logo.png" class="va-logo"></div>
         <div id="status-card">
-            <h2 id="state">System Ready</h2>
-            <button id="init-btn" onclick="activate()" style="padding:15px 30px; cursor:pointer;">ACTIVATE STATION</button>
+            <h2 id="state">Offline: Set Code in Admin</h2>
             <div id="incoming-call-ui" style="display:none;">
                 <h2 style="color: #28a745;">INCOMING CALL...</h2>
                 <button class="btn-answer" onclick="acceptCall()">ANSWER</button>
@@ -43,45 +44,60 @@
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay muted playsinline></video>
         <div class="controls">
-            <button class="btn" id="e-mute" onclick="toggleMute()">Mute</button>
-            <button class="btn" id="e-video" onclick="toggleVideo()">Video Off</button>
-            <button class="btn btn-end" onclick="hangUp()">Hang Up</button>
+            <button class="btn" onclick="location.reload()" style="background:#ff4444;">Hang Up</button>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="admin-modal">
+        <div class="admin-content">
+            <h3>Technician Admin</h3>
+            <label><b>This Station's Code:</b></label>
+            <input type="text" id="my-code-input" placeholder="e.g. 12345">
+            <button onclick="saveAdmin()" style="width:100%; background:green; color:white; padding:10px; cursor:pointer;">START STATION</button>
         </div>
     </div>
 
     <script>
-        const peer = new Peer('Expert-Laptop-Station');
+        let peer, localStream, activeCall;
         const ring = document.getElementById('ring');
-        let activeCall, localStream;
 
-        function activate() { document.getElementById('init-btn').style.display='none'; document.getElementById('state').innerText="Station Online"; }
+        // Initialize from storage
+        const savedCode = localStorage.getItem('tech-code');
+        if(savedCode) { startStation(savedCode); }
+
+        function openAdmin() { if(prompt("Pass:")==="123") document.getElementById('admin-panel').style.display='flex'; }
         
-        peer.on('call', call => { 
-            activeCall = call; 
-            ring.play().catch(()=>{});
-            document.getElementById('incoming-call-ui').style.display='block';
-            activeCall.on('close', () => location.reload());
-        });
+        function saveAdmin() {
+            const code = document.getElementById('my-code-input').value;
+            if(!code) return;
+            localStorage.setItem('tech-code', code);
+            location.reload();
+        }
+
+        function startStation(code) {
+            peer = new Peer('Expert-' + code);
+            document.getElementById('state').innerText = "Expert Station ONLINE: " + code;
+            
+            peer.on('call', call => {
+                activeCall = call;
+                ring.play().catch(()=>{});
+                document.getElementById('incoming-call-ui').style.display='block';
+            });
+            
+            peer.on('error', err => {
+                if(err.type === 'unavailable-id') alert("Code already in use!");
+            });
+        }
 
         async function acceptCall() {
             ring.pause();
-            try {
-                // Try ideal resolution, fall back to default
-                localStream = await navigator.mediaDevices.getUserMedia({video: {width: {ideal: 1280}}, audio: true})
-                    .catch(() => navigator.mediaDevices.getUserMedia({video: true, audio: true}));
-
-                document.getElementById('local-video').srcObject = localStream;
-                activeCall.answer(localStream);
-                document.getElementById('home-screen-ui').style.display='none';
-                document.getElementById('video-stage').style.display='block';
-                activeCall.on('stream', rs => { document.getElementById('remote-video').srcObject = rs; });
-            } catch (err) { alert("Camera Access Denied"); }
+            localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+            document.getElementById('local-video').srcObject = localStream;
+            activeCall.answer(localStream);
+            document.getElementById('home-screen-ui').style.display='none';
+            document.getElementById('video-stage').style.display='block';
+            activeCall.on('stream', rs => { document.getElementById('remote-video').srcObject = rs; });
         }
-
-        function toggleMute() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('e-mute').classList.toggle('off'); }
-        function toggleVideo() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('e-video').classList.toggle('off'); }
-        function hangUp() { if(activeCall) activeCall.close(); location.reload(); }
-        function openAdmin() { if(prompt("Pass:")==="123") alert("Admin: Settings are managed on Kiosk."); }
     </script>
 </body>
 </html>
