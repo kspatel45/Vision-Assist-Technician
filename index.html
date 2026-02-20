@@ -10,26 +10,24 @@
         body { background: var(--signifi-navy); color: white; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #home-screen-ui { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 90vh; width: 100%; padding: 40px 0; }
         .logo-box { background: white; padding: 15px 30px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .va-logo { width: 320px; } .signifi-logo { width: 200px; }
-        #status-card { text-align: center; }
+        .va-logo { width: 300px; } .signifi-logo { width: 180px; }
         .btn-answer { background: #28a745; color: white; padding: 20px 60px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.5rem; margin-top: 20px; }
         #video-stage { display: none; position: relative; width: 100vw; height: 100vh; background: #000; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
-        #local-video { position: absolute; top: 30px; right: 30px; width: 280px; height: 180px; border: 2px solid var(--accent-cyan); border-radius: 15px; object-fit: cover; z-index: 20; transform: scaleX(-1); background: #222; }
-        .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 30; }
-        .btn-ui { padding: 15px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; color: white; background: rgba(255,255,255,0.2); }
-        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
-        .admin-content { background: white; padding: 30px; border-radius: 15px; width: 400px; color: #333; }
-        input { width: 100%; padding: 10px; margin: 10px 0; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { position: absolute; top: 20px; right: 20px; width: 280px; height: 180px; border: 2px solid var(--accent-cyan); border-radius: 10px; transform: scaleX(-1); z-index: 20; background: #222; }
+        .controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 30; }
+        .btn-ui { padding: 12px 24px; border-radius: 10px; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-weight: bold; }
+        .admin-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .admin-content { background: white; padding: 25px; border-radius: 10px; width: 350px; color: #333; }
     </style>
 </head>
 <body>
     <audio id="ring" loop src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
     <div id="home-screen-ui">
         <div class="logo-box"><img src="https://raw.githubusercontent.com/kspatel45/VisionAssist/main/Vision%20Assist%20logo.png" class="va-logo"></div>
-        <div id="status-card">
+        <div id="status-card" style="text-align: center;">
             <h2 id="state">Offline: Set Code in Admin</h2>
-            <button id="init-btn" onclick="activate()" style="display:none; padding:15px 30px; cursor:pointer;">ACTIVATE STATION</button>
+            <button id="init-btn" onclick="activate()" style="display:none; padding:15px 30px; margin-top:10px; cursor:pointer;">ACTIVATE STATION</button>
             <div id="incoming-call-ui" style="display:none;">
                 <h2 style="color: #28a745;">INCOMING CALL...</h2>
                 <button class="btn-answer" onclick="acceptCall()">ANSWER</button>
@@ -48,12 +46,12 @@
         </div>
     </div>
 
-    <div id="admin-lock" onclick="openAdmin()" style="position:fixed; top:0; right:0; width:60px; height:60px; cursor:pointer;"></div>
+    <div id="admin-lock" onclick="openAdmin()" style="position:fixed; top:0; right:0; width:60px; height:60px; cursor:pointer; z-index:999;"></div>
     <div id="admin-panel" class="admin-modal">
         <div class="admin-content">
             <h3>Expert Admin</h3>
-            <input type="text" id="my-code-input" placeholder="Enter Station Code">
-            <button onclick="saveAdmin()" style="width:100%; background:green; color:white; padding:10px;">Save & Restart</button>
+            <input type="text" id="my-code-input" placeholder="Enter Station Code" style="width:100%; padding:8px; margin:10px 0;">
+            <button onclick="saveAdmin()" style="width:100%; background:green; color:white; padding:10px; cursor:pointer;">Save & Start</button>
         </div>
     </div>
 
@@ -74,7 +72,7 @@
 
         function startStation(code) {
             peer = new Peer('Expert-' + code);
-            document.getElementById('state').innerText = "Expert Station Locked";
+            document.getElementById('state').innerText = "Expert Station Ready";
             document.getElementById('init-btn').style.display = 'inline-block';
             
             peer.on('call', call => {
@@ -82,15 +80,9 @@
                 ring.play().catch(()=>{});
                 document.getElementById('incoming-call-ui').style.display = 'block';
                 
-                // Fix: Properly handle the incoming stream event
                 activeCall.on('stream', remoteStream => {
-                    const rv = document.getElementById('remote-video');
-                    if (rv.srcObject !== remoteStream) {
-                        rv.srcObject = remoteStream;
-                        rv.play();
-                    }
+                    document.getElementById('remote-video').srcObject = remoteStream;
                 });
-
                 activeCall.on('close', () => location.reload());
             });
         }
@@ -98,9 +90,13 @@
         async function acceptCall() {
             ring.pause();
             try {
+                // 1. Start Camera FIRST
                 localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
                 document.getElementById('local-video').srcObject = localStream;
+                
+                // 2. Answer with the ready stream
                 activeCall.answer(localStream);
+                
                 document.getElementById('home-screen-ui').style.display = 'none';
                 document.getElementById('video-stage').style.display = 'block';
             } catch (e) { alert("Camera Error"); }
